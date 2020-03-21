@@ -30,11 +30,12 @@ class AuthorAdmin(admin.ModelAdmin):
 
 class RoomExitInline(admin.TabularInline):
     model = RoomExit
+    extra = 4
 
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ('adventure', 'room_id', 'name')
+    list_display = ('adventure', 'room_id', 'name', 'is_dark')
     list_display_links = ('room_id', 'name')
     list_filter = ['adventure']
     ordering = ['adventure', 'room_id']

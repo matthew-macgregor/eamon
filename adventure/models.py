@@ -44,6 +44,7 @@ CLOTHING_TYPES = (
 ARMOR_TYPES = (
     (0, 'Armor'),
     (1, 'Shield'),
+    (2, 'Helmet'),
 )
 MARKDOWN_CHOICES = [(False, "Plain text"), (True, "Markdown")]
 
@@ -109,13 +110,20 @@ class Room(models.Model):
     adventure = models.ForeignKey(Adventure, on_delete=models.CASCADE, related_name='rooms')
     room_id = models.IntegerField(default=0)  # The in-game room ID.
     name = models.CharField(max_length=255)
-    is_markdown = models.BooleanField(default=0, choices=MARKDOWN_CHOICES, verbose_name="Text format")
+    is_markdown = models.BooleanField(default=False, choices=MARKDOWN_CHOICES, verbose_name="Text format")
     description = models.TextField(max_length=1000)
     # The ID of an effect to display after the description
     effect = models.IntegerField(null=True, blank=True)
     # The ID of an effect to display after the description, without a paragraph break.
     effect_inline = models.IntegerField(null=True, blank=True)
     is_dark = models.BooleanField(default=False)
+    dark_name = models.CharField(null=True, blank=True, max_length=255,
+                                 help_text="The name shown if the room is dark and the player doesn't have a light. "
+                                           "Leave blank to use the standard 'in the dark' message.")
+    dark_description = models.TextField(
+        null=True, blank=True, max_length=1000,
+        help_text="The description shown if the room is dark and the player doesn't"
+                  " have a light. Leave blank to use the standard 'it's too dark to see' message.")
 
     def __str__(self):
         return self.name
@@ -126,7 +134,11 @@ class RoomExit(models.Model):
     room_from = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='exits')
     room_to = models.IntegerField(default=0)  # Not a real foreign key. Yet.
     door_id = models.IntegerField(null=True, blank=True)
-    message = models.CharField(max_length=255, blank=True)
+    effect_id = models.IntegerField(null=True, blank=True,
+                                    help_text="The effect will be shown when the player moves in this direction. "
+                                              "You can also enter a zero for the connection and an effect ID to set up "
+                                              "a custom message on a non-existent exit, e.g., if the player can't go in"
+                                              " the ocean without a boat, etc.")
 
     def __str__(self):
         return str(self.room_from) + " " + self.direction
@@ -143,7 +155,7 @@ class Artifact(models.Model):
         null=True, max_length=255, blank=True,
         help_text="Other terms for this artifact. E.g., if the artifact name is 'secret door in"
                   " north wall' you could have a synonym of 'door' to help the player find it.")
-    is_markdown = models.BooleanField(default=0, choices=MARKDOWN_CHOICES, verbose_name="Text format")
+    is_markdown = models.BooleanField(default=False, choices=MARKDOWN_CHOICES, verbose_name="Text format")
     description = models.TextField(max_length=1000)
     # The ID of an effect to display after the description
     effect = models.IntegerField(null=True, blank=True)
@@ -245,6 +257,7 @@ class ArtifactMarking(models.Model):
 class Effect(models.Model):
     STYLES = (
         ('', 'Normal'),
+        ('emphasis', 'Bold'),
         ('success', 'Success (green)'),
         ('special', 'Special 1 (blue)'),
         ('special2', 'Special 1 (purple)'),
@@ -253,7 +266,7 @@ class Effect(models.Model):
     )
     adventure = models.ForeignKey(Adventure, on_delete=models.CASCADE, related_name='effects')
     effect_id = models.IntegerField(default=0)  # The in-game effect ID.
-    is_markdown = models.BooleanField(default=0, choices=MARKDOWN_CHOICES, verbose_name="Text format")
+    is_markdown = models.BooleanField(default=False, choices=MARKDOWN_CHOICES, verbose_name="Text format")
     text = models.TextField(max_length=65535)
     style = models.CharField(max_length=20, null=True, blank=True, choices=STYLES)  # display effect text in color
     next = models.IntegerField(null=True, blank=True,
@@ -290,7 +303,7 @@ class Monster(models.Model):
     synonyms = models.CharField(
         null=True, max_length=255, blank=True,
         help_text="Other names used for this monster. If the name is 'python' a synonym might be 'snake'")
-    is_markdown = models.BooleanField(default=0, choices=MARKDOWN_CHOICES, verbose_name="Text format")
+    is_markdown = models.BooleanField(default=False, choices=MARKDOWN_CHOICES, verbose_name="Text format")
     description = models.TextField(max_length=1000)
     # The ID of an effect to display after the description
     effect = models.IntegerField(null=True, help_text="Used only with EDX conversions")
@@ -414,6 +427,7 @@ class PlayerArtifact(models.Model):
     ARMOR_TYPES = (
         (0, 'Armor'),
         (1, 'Shield'),  # different in EDX - see manual
+        (2, 'Helmet'),
     )
     HANDS = (
         (1, 'One-handed'),

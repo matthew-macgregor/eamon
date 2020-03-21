@@ -4,6 +4,8 @@ import {Monster} from "./monster";
 import {CommandException} from "../utils/command.exception";
 import ArtifactRepository from "../repositories/artifact.repo";
 
+declare var game;
+
 /**
  * Artifact class. Represents all properties of a single artifact
  */
@@ -29,6 +31,7 @@ export class Artifact extends GameObject {
   static TYPE_USER_3: number = 16;
   static ARMOR_TYPE_ARMOR: number = 0;
   static ARMOR_TYPE_SHIELD: number = 1;
+  static ARMOR_TYPE_HELMET: number = 2;
 
   // data properties
   room_id: number; // if on the ground, which room
@@ -83,6 +86,7 @@ export class Artifact extends GameObject {
     if (this.type !== Artifact.TYPE_BOUND_MONSTER)
       this.monster_id = null;
     this.container_id = null;
+    this.is_worn = false;
   }
 
   /**
@@ -94,13 +98,14 @@ export class Artifact extends GameObject {
         this.monster_id = monster_id || 0;
         this.room_id = null;
         this.container_id = null;
+        this.is_worn = false;
+        game.monsters.get(this.monster_id).updateInventory();
       } else {
         throw new CommandException("Monster # " + monster_id + " does not exist.")
       }
     } else {
       throw new CommandException("moveToInventory() can't be used on bound monster artifacts.")
     }
-
   }
 
   /**
@@ -194,6 +199,7 @@ export class Artifact extends GameObject {
       this.container_id = container.id;
       this.room_id = null;
       this.monster_id = null;
+      this.is_worn = false;
       game.player.updateInventory();
       game.artifacts.updateVisible();
     } else {
@@ -429,7 +435,7 @@ export class Artifact extends GameObject {
     if (this.type === Artifact.TYPE_DEAD_BODY) {
       // if it's a dead body, hack it to bits
       game.history.write("You " + (source === "attack" ? "hack" : "blast") + " it to bits.");
-      this.room_id = null;
+      this.destroy();
 
     } else if (this.type === Artifact.TYPE_CONTAINER || this.type === Artifact.TYPE_DOOR) {
       // if it's a door or container, try to break it open.
@@ -477,11 +483,16 @@ export class Artifact extends GameObject {
    */
   public destroy(): void {
     let game = Game.getInstance();
+    let monster_id = this.monster_id;
     this.monster_id = null;
     this.room_id = null;
     this.container_id = null;
+    this.is_worn = false;
     game.artifacts.updateVisible();
     game.player.updateInventory();
+    if (monster_id) {
+      game.monsters.get(monster_id).updateInventory();
+    }
   }
 
   /**
@@ -507,6 +518,8 @@ export class Artifact extends GameObject {
           return "armor";
         case Artifact.ARMOR_TYPE_SHIELD:
           return "shield";
+        case Artifact.ARMOR_TYPE_HELMET:
+          return "helmet";
       }
     } else {
       return "treasure";
@@ -549,6 +562,8 @@ export class Artifact extends GameObject {
             return this.armor_class < 3 ? "leather" : "armor";
           case Artifact.ARMOR_TYPE_SHIELD:
             return "shield";
+          case Artifact.ARMOR_TYPE_HELMET:
+            return "helmet";
         }
       case Artifact.TYPE_CONTAINER:
         return "backpack";
@@ -567,7 +582,7 @@ export class Artifact extends GameObject {
    * Returns whether the artifact is armor
    */
   public isArmor(): boolean {
-    return (this.type === Artifact.TYPE_WEARABLE && (this.armor_type === Artifact.ARMOR_TYPE_ARMOR || this.armor_type === Artifact.ARMOR_TYPE_SHIELD));
+    return (this.type === Artifact.TYPE_WEARABLE && (this.armor_type !== null));
   }
 
 }

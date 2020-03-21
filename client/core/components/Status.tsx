@@ -8,13 +8,13 @@ class Status extends React.Component<any, any> {
 
   public render() {
     const game = this.props.game;
-    
+
     if (!game || !game.player) {
       return <div>Loading...</div>
     }
 
     const inTheDark = game.rooms.current_room.is_dark && !game.artifacts.isLightSource();
-    let agilityClass = "agility col-sm-2";
+    let agilityClass = "agility col-4";
 
     if (game.player.speed_multiplier > 1) { agilityClass += " success" }
 
@@ -24,55 +24,71 @@ class Status extends React.Component<any, any> {
     let worn = game.player.inventory.filter(a => a.is_worn);
     let carried = game.player.inventory.filter(a => !a.is_worn);
 
+    // console.log('status open?', this.props.open)
+    let statusClass = this.props.open ? '' : 'd-none';
+
     return (
-      <div className="status d-none d-md-block col-md-5">
-      <div className="status-widget player">
+      <div className={`status ${statusClass} d-md-block col-md-5`}>
+      <div className="status-widget player-stats">
         <div className="container">
           <div className="row">
-            <h3 className="heading">{game.player.name}</h3>
+            <h3 className="heading col-8">{game.player.name}</h3>
+            <div className="hp col-4 text-right">HP: { game.player.hardiness - game.player.damage }/{ game.player.hardiness }</div>
           </div>
 
-          <div className="stats row">
-            <div className="hardiness col-sm-2">HD: { game.player.hardiness }</div>
+          <div className="stats row no-gutters">
+            <div className="hardiness col-4">HD: { game.player.hardiness }</div>
             <div className={agilityClass}>AG: <span>{ game.player.agility * game.player.speed_multiplier}</span></div>
-            <div className="charisma col-sm-2">CH: { game.player.charisma }</div>
-            <div className="charisma col-sm-5 text-right">HP: { game.player.hardiness - game.player.damage }/{ game.player.hardiness }</div>
+            <div className="charisma col-4">CH: { game.player.charisma }</div>
+            {game.player.status_message ?
+              <div className="status-text col-12">({game.player.status_message})</div> : ''}
           </div>
 
-          <div className="weapon-abilities row">
-            <div className="axe col-sm">Axe:<br />{ game.player.weapon_abilities[1]}%</div>
-            <div className="bow col-sm">Bow:<br />{ game.player.weapon_abilities[2]}%</div>
-            <div className="club col-sm">Club:<br />{ game.player.weapon_abilities[3]}%</div>
-            <div className="spear col-sm">Spear:<br />{ game.player.weapon_abilities[4]}%</div>
-            <div className="sword col-sm">Sword:<br />{ game.player.weapon_abilities[5]}%</div>
+          <div className="weapon-abilities row no-gutters">
+            <div className="axe col">Axe:<br />{ game.player.weapon_abilities[1]}%</div>
+            <div className="bow col">Bow:<br />{ game.player.weapon_abilities[2]}%</div>
+            <div className="club col">Club:<br />{ game.player.weapon_abilities[3]}%</div>
+            <div className="spear col">Spear:<br />{ game.player.weapon_abilities[4]}%</div>
+            <div className="sword col">Sword:<br />{ game.player.weapon_abilities[5]}%</div>
           </div>
 
-          <div className="ae row">Armor expertise: { game.player.armor_expertise }%</div>
+          <div className="spell-abilities row no-gutters">
+            <div className="col">Blast:<br/>{ game.player.spell_abilities.blast }%</div>
+            <div className="col">Heal:<br/>{ game.player.spell_abilities.heal }%</div>
+            <div className="col">Power:<br/>{ game.player.spell_abilities.power }%</div>
+            <div className="col">Speed:<br/>{ game.player.spell_abilities.speed }%</div>
+          </div>
+
+          <div className="ae row">
+            <div className="col">Armor expertise: { game.player.armor_expertise }%</div>
+          </div>
 
           {game.player.weapon ? (
-            <div className="weapon row">Ready weapon: { titleCase(game.player.weapon.name) }{' '}
+            <div className="weapon row">
+              <div className="col">Ready weapon: { titleCase(game.player.weapon.name) }{' '}
               ({ game.player.weapon.dice }d{ game.player.weapon.sides })
+              </div>
             </div>
           ) : (
-            <div className="weapon none row">Ready weapon: none!</div>
+            <div className="weapon none row"><div className="col">Ready weapon: none!</div></div>
           )}
 
           {game.player.armor_class > 0 && (
-            <div className="armor row">Armor:&nbsp;
+            <div className="armor row"><div className="col">Armor:&nbsp;
               {game.player.armor_worn.map(armor => titleCase(armor.name)).join(" and ")}
               &nbsp;({ game.player.armor_class })
-            </div>
+            </div></div>
           )}
 
           {game.player.armor_class === 0 && (
-            <div className="armor none row">Armor: none!</div>
+            <div className="armor none row"><div className="col">Armor: none!</div></div>
           )}
 
         </div>
       </div>
 
       <div className="status-widget room">
-        {!inTheDark && (
+        {!inTheDark ? (
           <div>
             {/* onClick={this.toggleDesc()} */}
             <h3 className="heading">Current Location:</h3>
@@ -88,10 +104,21 @@ class Status extends React.Component<any, any> {
               ))}
             </div>
           </div>
-        )}
-        {inTheDark && (
+        ) : (
           <div>
-            <p className="room-name">Current Location: in the dark</p>
+            {game.rooms.current_room.dark_description ? (
+              <React.Fragment>
+                <h3 className="heading">Current Location:</h3>
+                <p className="room-name">{ game.rooms.current_room.dark_name }</p>
+              </React.Fragment>
+            ) : (
+              <p className="room-name">Current Location: in the dark</p>
+            )}
+            {game.rooms.current_room.dark_description && (
+              <ReactMarkdown className="room-description"
+                 source={game.rooms.current_room.dark_description}
+                 escapeHtml={false}/>
+            )}
           </div>
         )}
       </div>
@@ -112,7 +139,7 @@ class Status extends React.Component<any, any> {
         {/* special messages when it's dark */}
         {inTheDark && (
           <div className="monsters-list">
-            {game.monsters.visible.length && (
+            {game.monsters.visible.length > 0 && (
               <span className="monster none">You hear movement but it's too dark to see.</span>
             )}
             {game.monsters.visible.length === 0 && (
@@ -186,7 +213,7 @@ class StatusMonster extends React.Component<any, any> {
     return (
       <div className={className}>
         {singular ?
-          <span>{ monster.article } { monster.name }</span>
+          <span>{ monster.getDisplayName() }</span>
           :
           <span>{ visible_children.length } { monster.name_plural }</span>
         }{' '}

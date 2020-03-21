@@ -111,6 +111,11 @@ export default class Game {
   data: { [key: string]: any; } = {};
 
   /**
+   * A container for game counters. See countdown()
+   */
+  counters: { [key: string]: any; } = {};
+
+  /**
    * The game timer. Keeps track of the number of game clock ticks.
    */
   timer: number = 0;
@@ -481,7 +486,17 @@ export default class Game {
     let light = this.artifacts.isLightSource();
     // show room name and description
     if (this.rooms.current_room.is_dark && !light) {
-      this.history.write("It's too dark to see anything.");
+      if (!!this.rooms.current_room.dark_name) {
+        this.history.write(this.rooms.current_room.dark_name);
+      }
+      if (!!this.rooms.current_room.dark_description) {
+        if (!this.rooms.current_room.visited_in_dark) {
+          this.rooms.current_room.show_dark_description();
+          this.rooms.current_room.visited_in_dark = true;
+        }
+      } else {
+        game.history.write("It's too dark to see anything.");
+      }
     } else {
       this.history.write(this.rooms.current_room.name);
       if (Game.getInstance().data['bort']) {
@@ -567,7 +582,6 @@ export default class Game {
     // for unit testing, it's possible to set mock random numbers
     if (this.mock_random_numbers.length) {
       let num = this.mock_random_numbers.shift();
-      // console.log('using mock random number: ' + num);
       return num;
     }
 
@@ -599,6 +613,21 @@ export default class Game {
     let index = this.diceRoll(1, array.length) - 1;
     if (typeof(array[index]) === 'undefined') { console.log('oops: getRandomElement rolled index: ', index, array); }
     return array[index];
+  }
+
+  /**
+   * Counts down a game counter and returns true if it just counted
+   * down to zero
+   * @param key
+   */
+  public countdown(key: string): boolean {
+    if (this.counters[key] > 0) {
+      this.counters[key] -= 1;
+      if (this.counters[key] === 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
